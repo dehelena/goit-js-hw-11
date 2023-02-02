@@ -4,79 +4,152 @@ import { galleryMarkup } from './galleryMarkup';
 import SimpleLightbox from 'simplelightbox';
 import 'simplelightbox/dist/simple-lightbox.min.css';
 
-let lightbox = new SimpleLightbox('.gallery a');
-
 const formEl = document.querySelector('.search-form');
 const galleryEl = document.querySelector('.gallery');
 const loadMoreBtn = document.querySelector('.load-more');
+
+const lightbox = new SimpleLightbox('.gallery a');
+
 const pixabayAPI = new PixabayAPI();
 
-function onFormSubmit(e) {
+async function onFormSubmit(e) {
   e.preventDefault();
-  pixabayAPI.query = e.target.elements.searchQuery.value.trim();
+  const inputValue = e.target.elements.searchQuery.value.trim();
+  if (!inputValue) {
+    Notify.failure(
+      'Sorry, there are no images matching your search query. Please try again.'
+    );
+    galleryEl.innerHTML = '';
+    loadMoreBtn.classList.add('is-hidden');
+    return;
+  }
+
+  pixabayAPI.query = inputValue;
   pixabayAPI.resetPage();
   loadMoreBtn.classList.add('is-hidden');
 
-  pixabayAPI
-    .fetchPhotos()
-    .then(response => {
-      const {
-        data: { hits, totalHits },
-      } = response;
+  try {
+    const response = await pixabayAPI.fetchPhotos();
 
-      if (!pixabayAPI.query || hits.length === 0) {
-        Notify.failure(
-          'Sorry, there are no images matching your search query. Please try again.'
-        );
-        galleryEl.innerHTML = '';
-        e.target.reset();
-        return;
-      }
+    const {
+      data: { hits, totalHits },
+    } = response;
 
-      if (totalHits > 40) {
-        loadMoreBtn.classList.remove('is-hidden');
-      }
+    if (!pixabayAPI.query || hits.length === 0) {
+      Notify.failure(
+        'Sorry, there are no images matching your search query. Please try again.'
+      );
+      galleryEl.innerHTML = '';
+      e.target.reset();
+      return;
+    }
 
-      Notify.success(`Hooray! We found ${totalHits} images.`);
-      galleryEl.innerHTML = galleryMarkup(hits);
-    })
-    .catch(err => console.log(err));
+    if (totalHits > 40) {
+      loadMoreBtn.classList.remove('is-hidden');
+    }
+
+    Notify.success(`Hooray! We found ${totalHits} images.`);
+    galleryEl.innerHTML = galleryMarkup(hits);
+    lightbox.refresh();
+  } catch (err) {
+    console.log(err);
+  }
 }
 
-function onLoadMoreBtnClick(e) {
+//   pixabayAPI
+//     .fetchPhotos()
+//     .then(response => {
+//       const {
+//         data: { hits, totalHits },
+//       } = response;
+
+//       if (!pixabayAPI.query || hits.length === 0) {
+//         Notify.failure(
+//           'Sorry, there are no images matching your search query. Please try again.'
+//         );
+//         galleryEl.innerHTML = '';
+//         e.target.reset();
+//         return;
+//       }
+
+//       if (totalHits > 40) {
+//         loadMoreBtn.classList.remove('is-hidden');
+//       }
+
+//       Notify.success(`Hooray! We found ${totalHits} images.`);
+//       galleryEl.innerHTML = galleryMarkup(hits);
+//       lightbox.refresh();
+//     })
+//     .catch(err => console.log(err));
+// }
+
+async function onLoadMoreBtnClick(e) {
   pixabayAPI.incrementPage();
 
-  pixabayAPI
-    .fetchPhotos()
-    .then(response => {
-      const {
-        data: { hits, totalHits },
-      } = response;
-      pixabayAPI.setTotal(totalHits);
-      const hasMore = pixabayAPI.hasMorePhotos();
+  try {
+    const response = await pixabayAPI.fetchPhotos();
 
-      galleryEl.insertAdjacentHTML('beforeend', galleryMarkup(hits));
-      lightbox.refresh();
+    const {
+      data: { hits, totalHits },
+    } = response;
+    pixabayAPI.setTotal(totalHits);
+    const hasMore = pixabayAPI.hasMorePhotos();
 
-      //плавне прокручування
-      const { height: cardHeight } = document
-        .querySelector('.gallery')
-        .firstElementChild.getBoundingClientRect();
+    galleryEl.insertAdjacentHTML('beforeend', galleryMarkup(hits));
+    lightbox.refresh();
 
-      window.scrollBy({
-        top: cardHeight * 2,
-        behavior: 'smooth',
-      });
+    //плавне прокручування
+    const { height: cardHeight } = document
+      .querySelector('.gallery')
+      .firstElementChild.getBoundingClientRect();
 
-      if (!hasMore) {
-        Notify.failure(
-          'We are sorry, but you have reached the end of search results.'
-        );
-        loadMoreBtn.classList.add('is-hidden');
-      }
-    })
-    .catch(err => console.log(err));
+    window.scrollBy({
+      top: cardHeight * 2,
+      behavior: 'smooth',
+    });
+
+    if (!hasMore) {
+      Notify.failure(
+        'We are sorry, but you have reached the end of search results.'
+      );
+      loadMoreBtn.classList.add('is-hidden');
+    }
+  } catch (err) {
+    console.log(err);
+  }
 }
+
+//   pixabayAPI
+//     .fetchPhotos()
+//     .then(response => {
+//       const {
+//         data: { hits, totalHits },
+//       } = response;
+//       pixabayAPI.setTotal(totalHits);
+//       const hasMore = pixabayAPI.hasMorePhotos();
+
+//       galleryEl.insertAdjacentHTML('beforeend', galleryMarkup(hits));
+//       lightbox.refresh();
+
+//       //плавне прокручування
+//       const { height: cardHeight } = document
+//         .querySelector('.gallery')
+//         .firstElementChild.getBoundingClientRect();
+
+//       window.scrollBy({
+//         top: cardHeight * 2,
+//         behavior: 'smooth',
+//       });
+
+//       if (!hasMore) {
+//         Notify.failure(
+//           'We are sorry, but you have reached the end of search results.'
+//         );
+//         loadMoreBtn.classList.add('is-hidden');
+//       }
+//     })
+//     .catch(err => console.log(err));
+// }
 
 formEl.addEventListener('submit', onFormSubmit);
 loadMoreBtn.addEventListener('click', onLoadMoreBtnClick);

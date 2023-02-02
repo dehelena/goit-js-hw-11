@@ -10,9 +10,9 @@ export function galleryMarkup(gallery) {
       downloads,
     }) => {
       return `
+      <a href="${largeImageURL}"> 
       <div class="photo-card">
-      <a href="${largeImageURL}">
-  <img class='photo-img' src="${webformatURL}" alt="${tags}" loading="lazy" />
+  <img class='photo-img' src="${webformatURL}" alt="${tags}" loading="lazy" /> 
   <div class="info">
     <p class="info-item">
       <b>Likes</b>
@@ -31,8 +31,8 @@ export function galleryMarkup(gallery) {
       <span>${downloads}</span>
     </p>
   </div>
-   </a>
-</div>`;
+</div>
+</a> `;
     }
   );
 
